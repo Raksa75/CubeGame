@@ -1,0 +1,269 @@
+}
+
+/* ── Sidebar ── */
+#sidebar {
+    width: 200px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+}
+
+    .panel h3 {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: var(--text2);
+        margin-bottom: 10px;
+    }
+
+#cube-canvas {
+    display: block;
+    margin: 0 auto 10px;
+}
+
+#face-label {
+    font-size: 0.8rem;
+    color: var(--text2);
+    text-align: center;
+}
+
+#face-name {
+    color: var(--gold);
+}
+
+    #face-name.solid {
+        color: var(--accent);
+    }
+
+.key-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 32px);
+    gap: 4px;
+    margin: 0 auto 10px;
+    width: fit-content;
+}
+
+kbd {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-family: inherit;
+    color: var(--text);
+}
+
+.hint {
+    font-size: 0.75rem;
+    color: var(--text2);
+    margin-bottom: 4px;
+}
+
+/* ── Legend ── */
+.legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    color: var(--text2);
+    margin-bottom: 5px;
+}
+
+.leg-box {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.star-leg {
+    background: var(--gold);
+}
+
+.red-leg {
+    background: #8b1a1a;
+    border: 2px solid #f85149;
+}
+
+.blue-leg {
+    background: #1a3a8b;
+    border: 2px solid #58a6ff;
+}
+
+.teleport-leg {
+    background: #4a1a8b;
+    border: 2px solid #bc8cff;
+}
+
+.door-leg {
+    background: #2a4a2a;
+    border: 2px solid #3fb950;
+}
+
+.rotate-leg {
+    background: #0a4a4a;
+    border: 2px solid #39d353;
+}
+
+.wall-leg {
+    background: #1a1a1a;
+    border: 2px solid #30363d;
+}
+
+/* ── Sidebar buttons ── */
+#sidebar-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+button {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg3);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+    button:hover {
+        background: #2d333b;
+        border-color: var(--accent);
+    }
+
+#btn-next {
+    background: #0d2a0d;
+    border-color: var(--green);
+    color: var(--green);
+}
+
+    #btn-next:hover {
+        background: #1a3d1a;
+    }
+
+/* ── Overlay ── */
+#overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    backdrop-filter: blur(4px);
+}
+
+#overlay-box {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 36px 40px;
+    text-align: center;
+    max-width: 360px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+}
+
+#overlay-icon {
+    font-size: 3rem;
+    margin-bottom: 12px;
+}
+
+#overlay-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+}
+
+#overlay-msg {
+    color: var(--text2);
+    font-size: 0.9rem;
+    margin-bottom: 24px;
+    line-height: 1.5;
+}
+
+#overlay-actions {
+    display: flex;
+    gap: 10px;
+}
+
+    #overlay-actions button {
+        flex: 1;
+    }
+
+#overlay-btn1 {
+    background: #0d2a0d;
+    border-color: var(--green);
+    color: var(--green);
+}
+
+    #overlay-btn1:hover {
+        background: #1a3d1a;
+    }
+
+/* ── Color phase indicator ── */
+#color-phase-bar {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    padding: 6px 10px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-top: 8px;
+    font-size: 0.75rem;
+    color: var(--text2);
+}
+
+.phase-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+/* ── Utility ── */
+.hidden {
+    display: none !important;
+}
+
+@media (max-width: 700px) {
+    main {
+        flex-direction: column;
+        padding: 12px;
+    }
+
+    #sidebar {
+        width: 100%;
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+
+    .panel {
+        flex: 1;
+        min-width: 140px;
+    }
+
+    #sidebar-actions {
+        flex-direction: row;
+        width: 100%;
+    }
+}

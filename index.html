@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cube Énigme</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <div id="title-bar">
+                <h1>CUBE ÉNIGME</h1>
+                <div id="hud">
+                    <div class="hud-item" id="hud-level">Niveau <span id="hud-level-num">1</span></div>
+                    <div class="hud-item" id="hud-stars">★ <span id="hud-stars-got">0</span> / <span id="hud-stars-total">3</span></div>
+                    <div class="hud-item hidden" id="hud-moves">Mouvements : <span id="hud-moves-left">∞</span></div>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <div id="game-area">
+                <canvas id="game-canvas"></canvas>
+            </div>
+
+            <aside id="sidebar">
+                <div class="panel" id="panel-cube">
+                    <h3>État du cube</h3>
+                    <canvas id="cube-canvas" width="150" height="150"></canvas>
+                    <div id="face-label">Face du bas : <strong id="face-name">CREUSE</strong></div>
+                </div>
+
+                <div class="panel" id="panel-controls">
+                    <h3>Contrôles</h3>
+                    <div class="key-grid">
+                        <span></span><kbd>↑</kbd><span></span>
+                        <kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd>
+                    </div>
+                    <p class="hint">WASD ou flèches directionnelles</p>
+                    <p class="hint"><kbd>R</kbd> Recommencer le niveau</p>
+                </div>
+
+                <div class="panel" id="panel-legend">
+                    <h3>Légende</h3>
+                    <div class="legend-row"><span class="leg-box star-leg"></span> Étoile à collecter</div>
+                    <div class="legend-row hidden" id="leg-red"><span class="leg-box red-leg"></span> Case rouge (alterne)</div>
+                    <div class="legend-row hidden" id="leg-blue"><span class="leg-box blue-leg"></span> Case bleue (alterne)</div>
+                    <div class="legend-row hidden" id="leg-teleport"><span class="leg-box teleport-leg"></span> Téléporteur</div>
+                    <div class="legend-row hidden" id="leg-door"><span class="leg-box door-leg"></span> Porte rythmée</div>
+                    <div class="legend-row hidden" id="leg-rotate"><span class="leg-box rotate-leg"></span> Case de rotation</div>
+                    <div class="legend-row hidden" id="leg-wall"><span class="leg-box wall-leg"></span> Mur</div>
+                </div>
+
+                <div id="sidebar-actions">
+                    <button id="btn-restart">↺ Recommencer</button>
+                    <button id="btn-next" class="hidden">Niveau suivant →</button>
+                </div>
+            </aside>
+        </main>
+
+        <div id="overlay" class="hidden">
+            <div id="overlay-box">
+                <div id="overlay-icon"></div>
+                <h2 id="overlay-title"></h2>
+                <p id="overlay-msg"></p>
+                <div id="overlay-actions">
+                    <button id="overlay-btn1"></button>
+                    <button id="overlay-btn2" class="hidden"></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/cube.js"></script>
+    <script src="js/levels.js"></script>
+    <script src="js/renderer.js"></script>
+    <script src="js/game.js"></script>
+</body>
+</html>
