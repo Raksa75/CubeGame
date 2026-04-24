@@ -12,7 +12,7 @@ class Game {
 
     _init() {
         this.renderer = new Renderer(
-            document.getElementById('game-canvas'),
+            document.getElementById('game-area'),
             document.getElementById('cube-canvas'),
         );
 
