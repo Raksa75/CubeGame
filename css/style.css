@@ -1,3 +1,85 @@
+:root {
+    --bg1: #0d1117;
+    --bg2: #161b22;
+    --bg3: #21262d;
+    --border: #30363d;
+    --radius: 8px;
+    --text: #e6edf3;
+    --text2: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --gold: #ffd700;
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    height: 100%;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg1);
+    color: var(--text);
+}
+
+#app {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+}
+
+#title-bar {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+h1 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: var(--accent);
+}
+
+#hud {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.hud-item {
+    font-size: 0.85rem;
+    color: var(--text2);
+    font-weight: 600;
+}
+
+main {
+    flex: 1;
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+    align-items: flex-start;
+}
+
+#game-area {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+#game-canvas {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    display: block;
 }
 
 /* ── Sidebar ── */

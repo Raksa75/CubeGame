@@ -148,3 +148,122 @@ class Game {
             const phase = Math.floor(moveCount / doorDef.period) % 2;
             cell.open = doorDef.startOpen ? phase === 0 : phase === 1;
         });
+    }
+
+    _onLand(r, c) {
+        const { state, cube } = this;
+        const { level, grid } = state;
+        const cellDef = level.cells[r][c];
+        const cellState = grid[r][c];
+
+        if (cellDef === 'star' && !cellState.collected) {
+            cellState.collected = true;
+            state.starsCollected++;
+        }
+
+        if (cellDef === 'teleport') {
+            const pair = level.teleporterPairs.find(
+                p => (p.a.row === r && p.a.col === c) || (p.b.row === r && p.b.col === c)
+            );
+            if (pair) {
+                const dest = (pair.a.row === r && pair.a.col === c) ? pair.b : pair.a;
+                state.cubePos.row = dest.row;
+                state.cubePos.col = dest.col;
+            }
+        }
+
+        if (cellDef === 'rotate') {
+            cube.rotateCCW();
+        }
+
+        if (state.starsCollected >= state.starsTotal) {
+            state.won = true;
+            this._showWin();
+            return;
+        }
+
+        if (level.maxMoves !== null && state.moveCount >= level.maxMoves) {
+            state.failed = true;
+            this._showFail();
+        }
+    }
+
+    _showWin() {
+        const { state } = this;
+        const moves = state.moveCount;
+        document.getElementById('overlay-icon').textContent = '🏆';
+        document.getElementById('overlay-title').textContent = 'Niveau complété !';
+        document.getElementById('overlay-msg').textContent =
+            `${state.starsCollected} étoile${state.starsCollected > 1 ? 's' : ''} collectée${state.starsCollected > 1 ? 's' : ''} en ${moves} mouvement${moves > 1 ? 's' : ''}.`;
+        const btn1 = document.getElementById('overlay-btn1');
+        const btn2 = document.getElementById('overlay-btn2');
+        btn1.textContent = '↺ Rejouer';
+        btn1.onclick = () => this._restart();
+        if (this.levelIndex + 1 < LEVELS.length) {
+            btn2.textContent = 'Niveau suivant →';
+            btn2.classList.remove('hidden');
+            btn2.onclick = () => this._nextLevel();
+            document.getElementById('btn-next').classList.remove('hidden');
+        } else {
+            btn2.classList.add('hidden');
+        }
+        document.getElementById('overlay').classList.remove('hidden');
+    }
+
+    _showFail() {
+        document.getElementById('overlay-icon').textContent = '💀';
+        document.getElementById('overlay-title').textContent = 'Plus de mouvements !';
+        document.getElementById('overlay-msg').textContent =
+            `Vous avez épuisé vos ${this.state.level.maxMoves} mouvements. Réessayez !`;
+        const btn1 = document.getElementById('overlay-btn1');
+        const btn2 = document.getElementById('overlay-btn2');
+        btn1.textContent = '↺ Recommencer';
+        btn1.onclick = () => this._restart();
+        btn2.classList.add('hidden');
+        document.getElementById('overlay').classList.remove('hidden');
+    }
+
+    _restart() {
+        this._loadLevel(this.levelIndex);
+    }
+
+    _nextLevel() {
+        if (this.levelIndex + 1 < LEVELS.length) {
+            this._loadLevel(this.levelIndex + 1);
+        }
+    }
+
+    _updateHUD() {
+        const { state } = this;
+        document.getElementById('hud-level-num').textContent = state.level.id;
+        document.getElementById('hud-stars-got').textContent = state.starsCollected;
+        document.getElementById('hud-stars-total').textContent = state.starsTotal;
+        const movesEl = document.getElementById('hud-moves');
+        const movesLeftEl = document.getElementById('hud-moves-left');
+        if (state.level.maxMoves !== null) {
+            movesEl.classList.remove('hidden');
+            movesLeftEl.textContent = state.level.maxMoves - state.moveCount;
+        } else {
+            movesEl.classList.add('hidden');
+        }
+    }
+
+    _updateLegend() {
+        const { level } = this.state;
+        const mechSet = new Set(level.mechanics);
+        document.getElementById('leg-red').classList.toggle('hidden', !mechSet.has('color'));
+        document.getElementById('leg-blue').classList.toggle('hidden', !mechSet.has('color'));
+        document.getElementById('leg-teleport').classList.toggle('hidden', !mechSet.has('teleport'));
+        document.getElementById('leg-door').classList.toggle('hidden', !mechSet.has('door'));
+        document.getElementById('leg-rotate').classList.toggle('hidden', !mechSet.has('rotate'));
+        const hasWalls = level.cells.flat().includes('wall');
+        document.getElementById('leg-wall').classList.toggle('hidden', !hasWalls);
+    }
+
+    _hideOverlay() {
+        document.getElementById('overlay').classList.add('hidden');
+        document.getElementById('overlay-btn2').classList.add('hidden');
+    }
+}
+
+new Game();

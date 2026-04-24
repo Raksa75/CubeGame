@@ -98,3 +98,56 @@ const LEVELS = [
 
 // ─────────────────────────────────────────
 // Level 4 — "Contre la Montre"
+    // 6×6, timed doors + move limit.
+    // ─────────────────────────────────────────
+    {
+        id: 4,
+        name: 'Contre la Montre',
+        width: 6, height: 6,
+        start: { row: 5, col: 0 },
+        maxMoves: 22,
+        mechanics: ['door'],
+        cells: [
+            [C.S, C.F, C.F, C.F, C.F, C.S],
+            [C.F, C.W, C.W, C.F, C.W, C.F],
+            [C.F, C.F, C.D, C.F, C.D, C.F],
+            [C.F, C.W, C.F, C.F, C.F, C.F],
+            [C.F, C.F, C.F, C.W, C.F, C.F],
+            [C.F, C.F, C.F, C.F, C.F, C.S],
+        ],
+        teleporterPairs: [],
+        doors: [
+            { row: 2, col: 2, period: 3, startOpen: true },
+            { row: 2, col: 4, period: 2, startOpen: false },
+        ],
+    },
+
+    // ─────────────────────────────────────────
+    // Level 5 — "Le Grand Mélange"
+    // 7×7, toutes les mécaniques combinées.
+    // ─────────────────────────────────────────
+    {
+        id: 5,
+        name: 'Le Grand Mélange',
+        width: 7, height: 7,
+        start: { row: 6, col: 3 },
+        maxMoves: null,
+        mechanics: ['color', 'teleport', 'door', 'rotate'],
+        cells: [
+            [C.S, C.F, C.R, C.F, C.B, C.F, C.S],
+            [C.F, C.W, C.F, C.T, C.F, C.W, C.F],
+            [C.F, C.R, C.F, C.F, C.F, C.B, C.F],
+            [C.F, C.F, C.D, C.X, C.D, C.F, C.F],
+            [C.F, C.B, C.F, C.F, C.F, C.R, C.F],
+            [C.F, C.W, C.F, C.T, C.F, C.W, C.F],
+            [C.S, C.F, C.B, C.F, C.R, C.F, C.S],
+        ],
+        teleporterPairs: [
+            { a: { row: 1, col: 3 }, b: { row: 5, col: 3 } },
+        ],
+        doors: [
+            { row: 3, col: 2, period: 2, startOpen: true },
+            { row: 3, col: 4, period: 3, startOpen: false },
+        ],
+    },
+];
