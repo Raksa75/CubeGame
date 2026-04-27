@@ -1,3 +1,11 @@
+// Material indices for Three.js BoxGeometry faces:
+//   0=+X(right)  1=-X(left)  2=+Y(top)  3=-Y(bottom)  4=+Z(front)  5=-Z(back)
+//
+// The hollow face is ALWAYS material index 3 (local -Y).
+// We track the cube's accumulated world quaternion so the mesh physically rotates —
+// which naturally places the dark -Y face at whichever world direction is "hollow".
+// This way the player can read the cube state just by looking at the 3D model.
+
 class Renderer {
     constructor(container, cubeCanvas) {
         this.container = container;
@@ -6,7 +14,7 @@ class Renderer {
 
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x0d1117);
-        this.scene.fog = new THREE.FogExp2(0x0d1117, 0.03);
+        this.scene.fog = new THREE.FogExp2(0x0d1117, 0.025);
 
         this.camera = new THREE.PerspectiveCamera(50, 1, 0.1, 200);
 
@@ -17,9 +25,12 @@ class Renderer {
         this.webgl.domElement.style.borderRadius = '8px';
         container.appendChild(this.webgl.domElement);
 
-        this._tiles  = new Map();  // "r,c" -> tile mesh
-        this._extras = new Map();  // "r,c_tag" -> decorative mesh
-        this._cubeMesh = null;
+        this._tiles      = new Map();
+        this._extras     = new Map();
+        this._cubeMesh   = null;
+        this._cubeMats   = null;
+        this._cubeQuat   = new THREE.Quaternion();  // accumulated world orientation
+        this._cubeAnim   = null;                    // current roll animation state
         this._levelGroup = new THREE.Group();
         this.scene.add(this._levelGroup);
 
@@ -28,17 +39,18 @@ class Renderer {
         window.addEventListener('resize', () => this._resize());
     }
 
+    // ── Lights ─────────────────────────────────────────────────────────────────
+
     _setupLights() {
-        this.scene.add(new THREE.AmbientLight(0x8090b0, 0.5));
+        this.scene.add(new THREE.AmbientLight(0x8090b0, 0.55));
 
         this._sun = new THREE.DirectionalLight(0xffffff, 1.0);
-        this._sun.position.set(6, 12, 4);
+        this._sun.position.set(6, 14, 4);
         this._sun.castShadow = true;
         this._sun.shadow.mapSize.set(2048, 2048);
-        Object.assign(this._sun.shadow.camera, { near: 1, far: 80, left: -20, right: 20, top: 20, bottom: -20 });
+        Object.assign(this._sun.shadow.camera, { near: 1, far: 80, left: -24, right: 24, top: 24, bottom: -24 });
         this._sun.shadow.bias = -0.001;
         this.scene.add(this._sun);
-
         this._sunTarget = new THREE.Object3D();
         this.scene.add(this._sunTarget);
         this._sun.target = this._sunTarget;
@@ -56,7 +68,7 @@ class Renderer {
         this.camera.updateProjectionMatrix();
     }
 
-    // ── Called when a level loads ──────────────────────────────────────────────
+    // ── Level setup ────────────────────────────────────────────────────────────
 
     resize(level) {
         this._buildScene(level);
@@ -69,6 +81,11 @@ class Renderer {
         this._resize();
     }
 
+    resetCubeOrientation() {
+        this._cubeQuat.identity();
+        this._cubeAnim = null;
+    }
+
     _buildScene(level) {
         while (this._levelGroup.children.length) {
             this._levelGroup.remove(this._levelGroup.children[0]);
@@ -76,8 +93,9 @@ class Renderer {
         this._tiles.clear();
         this._extras.clear();
         this._cubeMesh = null;
+        this._cubeMats = null;
 
-        // Base slab under the whole grid
+        // Base slab
         const base = new THREE.Mesh(
             new THREE.BoxGeometry(level.width + 1, 0.08, level.height + 1),
             new THREE.MeshLambertMaterial({ color: 0x090c12 })
@@ -92,14 +110,7 @@ class Renderer {
             }
         }
 
-        // Player cube — 6 materials (one per face) so we can highlight the top/bottom
-        const cubeGeo = new THREE.BoxGeometry(0.82, 0.82, 0.82);
-        const cubeMats = Array.from({ length: 6 }, () =>
-            new THREE.MeshLambertMaterial({ color: 0x1f6feb, emissive: new THREE.Color(0x061a3a), emissiveIntensity: 0.15 })
-        );
-        this._cubeMesh = new THREE.Mesh(cubeGeo, cubeMats);
-        this._cubeMesh.castShadow = true;
-        this._levelGroup.add(this._cubeMesh);
+        this._buildCube();
     }
 
     _spawnTile(r, c, type) {
@@ -112,20 +123,20 @@ class Renderer {
             );
             m.position.set(c, 0.265, r);
             m.receiveShadow = true;
-            m.castShadow = true;
+            m.castShadow   = true;
             this._levelGroup.add(m);
             this._tiles.set(key, m);
             return;
         }
 
         const tileColor = {
-            floor: 0x161b22, star: 0x1a2030, red:      0x2a0d0d,
-            blue:  0x0d1a2a, teleport: 0x150a28, door: 0x0a200a, rotate: 0x0a1520,
+            floor: 0x161b22, star: 0x1a2030, red: 0x2a0d0d,
+            blue: 0x0d1a2a, teleport: 0x150a28, door: 0x0a200a, rotate: 0x0a1520,
         }[type] || 0x161b22;
 
         const tileGeo = new THREE.BoxGeometry(0.92, 0.12, 0.92);
-        const tileMat = new THREE.MeshLambertMaterial({ color: tileColor, emissive: new THREE.Color(0, 0, 0) });
-        const tile = new THREE.Mesh(tileGeo, tileMat);
+        const mat     = new THREE.MeshLambertMaterial({ color: tileColor, emissive: new THREE.Color(0, 0, 0) });
+        const tile    = new THREE.Mesh(tileGeo, mat);
         tile.position.set(c, 0, r);
         tile.receiveShadow = true;
         tile.add(new THREE.LineSegments(
@@ -168,12 +179,152 @@ class Renderer {
         }
     }
 
-    // ── Per-frame render ───────────────────────────────────────────────────────
+    // ── Cube construction ──────────────────────────────────────────────────────
+
+    _buildCube() {
+        // Stone texture via canvas
+        const tex = this._makeStoneTexture();
+
+        // Solid face material (stone grey)
+        const solidMat = () => new THREE.MeshLambertMaterial({
+            map: tex,
+            emissive: new THREE.Color(0x0a0e1a),
+            emissiveIntensity: 0.15,
+        });
+
+        // Hollow face material (dark interior — always mat index 3, local -Y)
+        const hollowMat = new THREE.MeshLambertMaterial({
+            color: 0x0e0205,
+            emissive: new THREE.Color(0x1a0005),
+            emissiveIntensity: 0.4,
+        });
+
+        // BoxGeometry face order: +X, -X, +Y, -Y, +Z, -Z
+        this._cubeMats = [
+            solidMat(),   // 0  +X right
+            solidMat(),   // 1  -X left
+            solidMat(),   // 2  +Y top
+            hollowMat,    // 3  -Y bottom  ← THE HOLLOW FACE (always)
+            solidMat(),   // 4  +Z front
+            solidMat(),   // 5  -Z back
+        ];
+
+        const geo = new THREE.BoxGeometry(0.88, 0.88, 0.88);
+        this._cubeMesh = new THREE.Mesh(geo, this._cubeMats);
+        this._cubeMesh.castShadow = true;
+
+        // Edge highlight
+        this._cubeMesh.add(new THREE.LineSegments(
+            new THREE.EdgesGeometry(geo),
+            new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 1 })
+        ));
+
+        this._levelGroup.add(this._cubeMesh);
+    }
+
+    _makeStoneTexture() {
+        const size = 128;
+        const cv   = document.createElement('canvas');
+        cv.width   = cv.height = size;
+        const ctx  = cv.getContext('2d');
+
+        // Base
+        ctx.fillStyle = '#8a96a8';
+        ctx.fillRect(0, 0, size, size);
+
+        // Panel lines (gives a stone-block segmented look)
+        ctx.strokeStyle = '#6a7585';
+        ctx.lineWidth = 3;
+        const lines = [size / 3, size * 2 / 3];
+        lines.forEach(v => {
+            ctx.beginPath(); ctx.moveTo(v, 0);     ctx.lineTo(v, size);  ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, v);     ctx.lineTo(size, v);  ctx.stroke();
+        });
+
+        // Light edge bevel
+        ctx.strokeStyle = '#aab5c5';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(2, 2, size - 4, size - 4);
+
+        return new THREE.CanvasTexture(cv);
+    }
+
+    // ── Animation API (called by Game) ─────────────────────────────────────────
+
+    isAnimating() { return this._cubeAnim !== null; }
+
+    // dir: 'up'|'down'|'left'|'right'  (game direction, not world direction)
+    animateRoll(dir, fromPos, toPos) {
+        // World-space rotation axes for each game direction
+        // Verified: rollRight → -90° Z, rollLeft → +90° Z,
+        //           rollForward(down) → +90° X, rollBackward(up) → -90° X
+        const cfg = {
+            right: { ax: 0, ay: 0, az: 1, angle: -Math.PI / 2 },
+            left:  { ax: 0, ay: 0, az: 1, angle:  Math.PI / 2 },
+            down:  { ax: 1, ay: 0, az: 0, angle:  Math.PI / 2 },
+            up:    { ax: 1, ay: 0, az: 0, angle: -Math.PI / 2 },
+        }[dir];
+
+        const rollQ = new THREE.Quaternion().setFromAxisAngle(
+            new THREE.Vector3(cfg.ax, cfg.ay, cfg.az), cfg.angle
+        );
+        // World-space pre-multiplication: newQuat = roll * currentQuat
+        const toQuat = rollQ.clone().multiply(this._cubeQuat);
+
+        this._cubeAnim = {
+            fromPos:  { col: fromPos.col, row: fromPos.row },
+            toPos:    { col: toPos.col,   row: toPos.row   },
+            fromQuat: this._cubeQuat.clone(),
+            toQuat,
+            startTime: Date.now(),
+            duration:  160,  // ms
+        };
+    }
+
+    // CCW rotation tile: -90° around world Y
+    applyCCWRotation() {
+        const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
+        this._cubeQuat.premultiply(q);
+        if (this._cubeMesh) this._cubeMesh.quaternion.copy(this._cubeQuat);
+    }
+
+    // ── Per-frame animation update ─────────────────────────────────────────────
+
+    _tickAnim() {
+        if (!this._cubeAnim) return;
+        const { fromPos, toPos, fromQuat, toQuat, startTime, duration } = this._cubeAnim;
+
+        const raw = (Date.now() - startTime) / duration;
+        const t   = Math.min(raw, 1);
+        // Ease in-out quad
+        const e   = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+
+        // Arc position: linear in X/Z, sine bump in Y
+        this._cubeMesh.position.set(
+            fromPos.col + (toPos.col - fromPos.col) * e,
+            0.50 + 0.14 * Math.sin(e * Math.PI),
+            fromPos.row + (toPos.row - fromPos.row) * e
+        );
+
+        // Smooth rotation slerp
+        const q = new THREE.Quaternion().slerpQuaternions(fromQuat, toQuat, e);
+        this._cubeMesh.quaternion.copy(q);
+
+        if (t >= 1) {
+            this._cubeMesh.position.set(toPos.col, 0.50, toPos.row);
+            this._cubeQuat.copy(toQuat);
+            this._cubeMesh.quaternion.copy(toQuat);
+            this._cubeAnim = null;
+        }
+    }
+
+    // ── Main render ────────────────────────────────────────────────────────────
 
     render(state) {
         const { level, grid, cubePos, cube, colorPhase } = state;
         const t = Date.now();
 
+        // Update tile materials and animated extras
         for (let r = 0; r < level.height; r++) {
             for (let c = 0; c < level.width; c++) {
                 const key  = `${r},${c}`;
@@ -186,14 +337,12 @@ class Renderer {
                     tile.material.emissive.setHex(on ? 0x3a0000 : 0x000000);
                     tile.material.emissiveIntensity = on ? 0.3 : 0;
                 }
-
                 if (type === 'blue' && tile) {
                     const on = colorPhase === 0;
                     tile.material.color.setHex(on ? 0x0f2a5a : 0x080a1a);
                     tile.material.emissive.setHex(on ? 0x001a3d : 0x000000);
                     tile.material.emissiveIntensity = on ? 0.3 : 0;
                 }
-
                 if (type === 'door' && tile) {
                     const open = grid[r][c].open;
                     tile.material.color.setHex(open ? 0x0d3a0d : 0x2a0808);
@@ -202,7 +351,6 @@ class Renderer {
                     tile.scale.y    = open ? 1 : 4.5;
                     tile.position.y = open ? 0 : 0.255;
                 }
-
                 if (type === 'teleport') {
                     const ring = this._extras.get(key + '_ring');
                     if (ring) {
@@ -210,50 +358,36 @@ class Renderer {
                         ring.material.emissiveIntensity = 0.4 + 0.3 * Math.sin(t * 0.004);
                     }
                 }
-
                 if (type === 'rotate') {
                     const arrow = this._extras.get(key + '_arrow');
                     if (arrow) arrow.rotation.y += 0.04;
                 }
 
+                // Floating star
                 const star = this._extras.get(key + '_star');
                 if (star) {
                     star.visible = !grid[r][c].collected;
                     if (star.visible) {
-                        star.rotation.y      += 0.03;
-                        star.position.y       = 0.38 + 0.07 * Math.sin(t * 0.0025 + r + c);
+                        star.rotation.y  += 0.03;
+                        star.position.y   = 0.38 + 0.07 * Math.sin(t * 0.0025 + r + c);
                     }
                 }
             }
         }
 
-        // Update cube appearance
-        if (this._cubeMesh) {
-            this._cubeMesh.position.set(cubePos.col, 0.49, cubePos.row);
-            const hollow = cube.hollowDown;
-            const base   = hollow ? 0x1f6feb : 0xd63031;
-            const em     = hollow ? 0x061a3a : 0x3a0606;
-            this._cubeMesh.material.forEach((mat, i) => {
-                if (i === 2) {        // +Y top face
-                    mat.color.setHex(hollow ? 0x4a9eff : 0xff5555);
-                    mat.emissive.setHex(em);
-                    mat.emissiveIntensity = 0.35;
-                } else if (i === 3) { // -Y bottom face
-                    mat.color.setHex(hollow ? 0x030e1e : 0x140303);
-                    mat.emissiveIntensity = 0;
-                } else {
-                    mat.color.setHex(base);
-                    mat.emissive.setHex(em);
-                    mat.emissiveIntensity = 0.15;
-                }
-            });
+        // Animate cube roll or hold position
+        if (this._cubeAnim) {
+            this._tickAnim();
+        } else if (this._cubeMesh) {
+            this._cubeMesh.position.set(cubePos.col, 0.50, cubePos.row);
+            this._cubeMesh.quaternion.copy(this._cubeQuat);
         }
 
         this.webgl.render(this.scene, this.camera);
         this.renderCubeState(cube);
     }
 
-    // ── Sidebar cube-net (2-D canvas) ──────────────────────────────────────────
+    // ── Sidebar cube net (2-D canvas) ──────────────────────────────────────────
 
     renderCubeState(cube) {
         const ctx = this.cctx;
@@ -280,12 +414,12 @@ class Renderer {
             const isHollow = cube[slot] === 1;
             const cx = startX + gx * fs;
             const cy = startY + gy * fs;
-            ctx.fillStyle = isHollow ? '#0d2a4a' : '#161b22';
+            ctx.fillStyle = isHollow ? '#1a0204' : '#161b22';
             ctx.fillRect(cx + 2, cy + 2, fs - 4, fs - 4);
-            ctx.strokeStyle = isHollow ? '#58a6ff' : '#30363d';
+            ctx.strokeStyle = isHollow ? '#ff4466' : '#30363d';
             ctx.lineWidth = isHollow ? 2 : 1;
             ctx.strokeRect(cx + 2, cy + 2, fs - 4, fs - 4);
-            ctx.fillStyle = isHollow ? '#58a6ff' : '#8b949e';
+            ctx.fillStyle = isHollow ? '#ff4466' : '#8b949e';
             ctx.font = `${isHollow ? 'bold ' : ''}${Math.floor(fs * 0.24)}px monospace`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -297,8 +431,8 @@ class Renderer {
             }
         });
 
-        const hollowPos = cube.hollowPosition();
-        const posLabels = { top: 'HAUT', bottom: 'BAS', front: 'DEVANT', back: 'ARRIÈRE', left: 'GAUCHE', right: 'DROITE' };
+        const hollowPos  = cube.hollowPosition();
+        const posLabels  = { top: 'HAUT', bottom: 'BAS', front: 'DEVANT', back: 'ARRIÈRE', left: 'GAUCHE', right: 'DROITE' };
         const el = document.getElementById('face-name');
         if (el) {
             el.textContent = posLabels[hollowPos] || hollowPos.toUpperCase();

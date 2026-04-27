@@ -57,6 +57,7 @@ class Game {
 
         this._updateHUD();
         this._updateLegend();
+        this.renderer.resetCubeOrientation();
         this.renderer.resize(level);
 
         document.getElementById('btn-next').classList.add('hidden');
@@ -79,6 +80,7 @@ class Game {
 
     _onKey(e) {
         if (this.state.won || this.state.failed) return;
+        if (this.renderer.isAnimating()) return;
 
         const map = {
             ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
@@ -112,11 +114,13 @@ class Game {
 
         // Apply roll
         const rollFn = { up: 'rollBackward', down: 'rollForward', left: 'rollLeft', right: 'rollRight' }[dir];
+        const prevPos = { row: cubePos.row, col: cubePos.col };
         cube[rollFn]();
 
         // Move cube
         cubePos.row = nr;
         cubePos.col = nc;
+        this.renderer.animateRoll(dir, prevPos, cubePos);
         state.moveCount++;
 
         // Toggle color phase after each move
@@ -174,6 +178,7 @@ class Game {
 
         if (cellDef === 'rotate') {
             cube.rotateCCW();
+            this.renderer.applyCCWRotation();
         }
 
         if (state.starsCollected >= state.starsTotal) {
