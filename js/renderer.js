@@ -182,71 +182,30 @@ class Renderer {
     // ── Cube construction ──────────────────────────────────────────────────────
 
     _buildCube() {
-        // Stone texture via canvas
-        const tex = this._makeStoneTexture();
-
-        // Solid face material (stone grey)
-        const solidMat = () => new THREE.MeshLambertMaterial({
-            map: tex,
-            emissive: new THREE.Color(0x0a0e1a),
-            emissiveIntensity: 0.15,
-        });
-
-        // Hollow face material (dark interior — always mat index 3, local -Y)
-        const hollowMat = new THREE.MeshLambertMaterial({
-            color: 0x0e0205,
-            emissive: new THREE.Color(0x1a0005),
-            emissiveIntensity: 0.4,
-        });
-
         // BoxGeometry face order: +X, -X, +Y, -Y, +Z, -Z
+        // Material index 3 (-Y bottom) is always the hollow face.
+        // The accumulated quaternion physically rotates the mesh so the dark face
+        // ends up at the correct world position after each roll.
+        const solid  = c => new THREE.MeshLambertMaterial({ color: c });
         this._cubeMats = [
-            solidMat(),   // 0  +X right
-            solidMat(),   // 1  -X left
-            solidMat(),   // 2  +Y top
-            hollowMat,    // 3  -Y bottom  ← THE HOLLOW FACE (always)
-            solidMat(),   // 4  +Z front
-            solidMat(),   // 5  -Z back
+            solid(0x8a96a8),   // 0  +X right   — stone grey
+            solid(0x7a8698),   // 1  -X left     — slightly darker
+            solid(0xaab5c5),   // 2  +Y top      — lighter (catches light)
+            solid(0x0e0205),   // 3  -Y bottom   ← HOLLOW (dark red-black)
+            solid(0x8a96a8),   // 4  +Z front
+            solid(0x7a8698),   // 5  -Z back
         ];
 
         const geo = new THREE.BoxGeometry(0.88, 0.88, 0.88);
         this._cubeMesh = new THREE.Mesh(geo, this._cubeMats);
         this._cubeMesh.castShadow = true;
 
-        // Edge highlight
         this._cubeMesh.add(new THREE.LineSegments(
             new THREE.EdgesGeometry(geo),
-            new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 1 })
+            new THREE.LineBasicMaterial({ color: 0xc8d0dc })
         ));
 
         this._levelGroup.add(this._cubeMesh);
-    }
-
-    _makeStoneTexture() {
-        const size = 128;
-        const cv   = document.createElement('canvas');
-        cv.width   = cv.height = size;
-        const ctx  = cv.getContext('2d');
-
-        // Base
-        ctx.fillStyle = '#8a96a8';
-        ctx.fillRect(0, 0, size, size);
-
-        // Panel lines (gives a stone-block segmented look)
-        ctx.strokeStyle = '#6a7585';
-        ctx.lineWidth = 3;
-        const lines = [size / 3, size * 2 / 3];
-        lines.forEach(v => {
-            ctx.beginPath(); ctx.moveTo(v, 0);     ctx.lineTo(v, size);  ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(0, v);     ctx.lineTo(size, v);  ctx.stroke();
-        });
-
-        // Light edge bevel
-        ctx.strokeStyle = '#aab5c5';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(2, 2, size - 4, size - 4);
-
-        return new THREE.CanvasTexture(cv);
     }
 
     // ── Animation API (called by Game) ─────────────────────────────────────────
@@ -306,9 +265,8 @@ class Renderer {
             fromPos.row + (toPos.row - fromPos.row) * e
         );
 
-        // Smooth rotation slerp
-        const q = new THREE.Quaternion().slerpQuaternions(fromQuat, toQuat, e);
-        this._cubeMesh.quaternion.copy(q);
+        // Smooth rotation slerp (compatible with all Three.js r128 builds)
+        this._cubeMesh.quaternion.copy(fromQuat).slerp(toQuat, e);
 
         if (t >= 1) {
             this._cubeMesh.position.set(toPos.col, 0.50, toPos.row);
