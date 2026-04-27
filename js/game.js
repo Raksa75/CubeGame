@@ -160,7 +160,7 @@ class Game {
         const cellDef = level.cells[r][c];
         const cellState = grid[r][c];
 
-        if (cellDef === 'star' && !cellState.collected) {
+        if (cellDef === 'star' && !cellState.collected && cube.hollowDown) {
             cellState.collected = true;
             state.starsCollected++;
         }
